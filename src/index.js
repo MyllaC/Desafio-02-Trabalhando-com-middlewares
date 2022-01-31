@@ -10,7 +10,7 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  const { user } = request;
+  const { username } = request.headers;
   const user = users.find((user) => user.username === username);
 
   if (!user) {
@@ -25,13 +25,12 @@ function checksExistsUserAccount(request, response, next) {
 function checksCreateTodosUserAvailability(request, response, next) {
   const { user } = request;
 
-  const { pro, todos } = user;
+  const userHasTodosAvailability = function () {
+    return (!user.pro && user.todos.length < 10) || user.pro;
+  };
 
-  if (!pro && todos.lenght >= 10) {
-    return response
-      .status(403)
-      .json({ error: "User not Pro or Already have 10 or more todos" });
-  }
+  if (!userHasTodosAvailability())
+    return response.status(403).json({ error: "Limite de 10 todo atingido" });
 
   return next();
 }
@@ -42,17 +41,17 @@ function checksTodoExists(request, response, next) {
 
   const user = users.find((user) => user.username === username);
 
-  const todo = user.todos.find((todo) => todo.id === id);
+  if (!user) {
+    return response.status(404).json({ error: "User does not exists." });
+  }
 
   if (!validate(id)) {
     return response.status(400).json({ error: "Id is not a valid UUID!" });
   }
 
-  if (!user) {
-    return response.status(404).json({ error: "User does not exists." });
-  }
+  const todo = user.todos.find((todo) => todo.id === id);
 
-  if (!userTodo) {
+  if (!todo) {
     return response.status(404).json({ error: "Todo does not exist!" });
   }
 
@@ -65,13 +64,13 @@ function checksTodoExists(request, response, next) {
 function findUserById(request, response, next) {
   const { id } = request.params;
 
-  const findUserByID = users.find((user) => user.id === id);
+  const user = users.find((user) => user.id === id);
 
-  if (!findUserByID) {
+  if (!user) {
     return response.status(404).json({ error: "ID not found" });
   }
 
-  request.user = findUserByID;
+  request.user = user;
 
   return next();
 }
